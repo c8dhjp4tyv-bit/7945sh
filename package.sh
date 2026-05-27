@@ -13,7 +13,6 @@ mkdir -p "$OUT_DIR"
 
 # Clean old packages at root
 rm -f "$CWD"/7945sh_1.0.0_amd64.deb "$CWD"/7945sh-1.0.0-1-x86_64.pkg.tar.zst "$CWD"/7945sh-1.0.0-1.x86_64.rpm
-rm -f "$CWD"/7945terminal_1.0.0_amd64.deb "$CWD"/7945terminal-1.0.0-1-x86_64.pkg.tar.zst "$CWD"/7945terminal-1.0.0-1.x86_64.rpm
 
 # Step 1: Ensure up-to-date shell binary
 echo "=== Building shell executable binary ==="
