@@ -16,7 +16,7 @@ rm -f "$CWD"/7945sh_1.0.0_amd64.deb "$CWD"/7945sh-1.0.0-1-x86_64.pkg.tar.zst "$C
 
 # Step 1: Ensure up-to-date shell binary
 echo "=== Building shell executable binary ==="
-pyinstaller --onefile --name 7945sh "$CWD/shell.py"
+python3 -m PyInstaller --onefile --name 7945sh "$CWD/7945sh.py"
 rm -f "$CWD/7945sh"
 cp "$CWD/dist/7945sh" "$CWD/7945sh"
 
@@ -33,7 +33,7 @@ cp -r "$ROOT_DIR/usr" "$DEB_STAGE/"
 
 cat << 'EOF' > "$DEB_STAGE/DEBIAN/control"
 Package: 7945sh
-Version: 1.0.0
+Version: 1.0.1
 Section: utils
 Priority: optional
 Architecture: amd64
@@ -60,10 +60,9 @@ cp -r "$ROOT_DIR/usr" "$ARCH_STAGE/"
 
 cat << 'EOF' > "$ARCH_STAGE/.PKGINFO"
 pkgname = 7945sh
-pkgver = 1.0.0
-pkgrel = 1
+pkgver = 1.0.1-1
 pkgdesc = Custom fast interactive Linux shell with live syntax highlighting and autocomplete
-url = https://github.com/busiedcake7945/7945sh
+url = https://github.com/busiedcake7945/terminal
 arch = x86_64
 license = MIT
 EOF
@@ -81,12 +80,12 @@ cp "$CWD/7945sh" "$RPM_TOP/SOURCES/"
 
 cat << 'EOF' > "$RPM_TOP/SPECS/7945sh.spec"
 Name:           7945sh
-Version:        1.0.0
+Version:        1.0.1
 Release:        1%{?dist}
 Summary:        Custom fast interactive Linux shell with live syntax highlighting and autocomplete
 
 License:        MIT
-URL:            https://github.com/busiedcake7945/7945sh
+URL:            https://github.com/busiedcake7945/terminal
 
 # Disable debuginfo package
 %define debug_package %{nil}
