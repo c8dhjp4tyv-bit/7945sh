@@ -63,7 +63,7 @@ pkgname = 7945sh
 pkgver = 1.0.0
 pkgrel = 1
 pkgdesc = Custom fast interactive Linux shell with live syntax highlighting and autocomplete
-url = https://github.com/busiedcake7945/terminal
+url = https://github.com/busiedcake7945/7945sh
 arch = x86_64
 license = MIT
 EOF
@@ -86,7 +86,7 @@ Release:        1%{?dist}
 Summary:        Custom fast interactive Linux shell with live syntax highlighting and autocomplete
 
 License:        MIT
-URL:            https://github.com/busiedcake7945/terminal
+URL:            https://github.com/busiedcake7945/7945sh
 
 # Disable debuginfo package
 %define debug_package %{nil}
