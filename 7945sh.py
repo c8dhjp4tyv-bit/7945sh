@@ -42,7 +42,7 @@ SYNTAX_COLORS = {
 }
 
 DEFAULT_RC = """# 7945sh RC
-PROMPT={CYAN}┌─[{BLUE}{user}{CYAN}]─({BLUE}{path}{CYAN}){RESET}\\n{CYAN}└─╼ {RESET}
+PROMPT="{GREEN}{user}@{host}:{BLUE}{path{RESET}$"
 BLUE=\\x1b[38;5;45m
 CYAN=\\x1b[38;5;51m
 RED=\\x1b[31m
@@ -58,8 +58,6 @@ alias mv=mv -i
 alias rm=rm -i
 alias ..=cd ..
 alias ...=cd ../..
-SYNTAX_HIGHLIGHT=true
-AUTOCORRECT=true
 """
 
 AUTOCORRECT_DICT = {
@@ -77,6 +75,18 @@ app_config = {**COLORS, "PROMPT": "{CYAN}┌─[{BLUE}{user}{CYAN}]─({BLUE}{pa
 binary_cache = set()
 syntax_highlight = True
 autocorrect_enabled = True
+
+# Open /dev/tty directly so subprocess I/O always hits the real TTY device,
+# bypassing any Python or prompt_toolkit output interception.
+# This is required for Sixel, Kitty graphics protocol, fastfetch images, etc.
+try:
+    _tty_fd = os.open("/dev/tty", os.O_RDWR)
+    _tty_r_fd = _tty_fd
+    _tty_w_fd = os.dup(_tty_fd)
+except OSError:
+    _tty_r_fd = sys.__stdin__.fileno()
+    _tty_w_fd = sys.__stdout__.fileno()
+
 
 def levenshtein(s1, s2):
     if len(s1) < len(s2): return levenshtein(s2, s1)
@@ -258,8 +268,16 @@ def is_valid_command(cmd_name):
 def highlight_syntax(text):
     if not syntax_highlight or not text: return text
     
-    parts = text.split()
-    if not parts: return text
+    # Isolate comments
+    if '#' in text:
+        code_part, comment_part = text.split('#', 1)
+        comment_part = '#' + comment_part
+    else:
+        code_part, comment_part = text, ''
+        
+    parts = code_part.split()
+    if not parts: 
+        return f"{SYNTAX_COLORS['comment']}{comment_part}{COLORS['RESET']}" if comment_part else text
     
     command = parts[0]
     args = ' '.join(parts[1:]) if len(parts) > 1 else ''
@@ -289,9 +307,13 @@ def highlight_syntax(text):
         highlighted_args = re.sub(r'([|&;<>])', 
                                   lambda m: f"{SYNTAX_COLORS['operator']}{m.group(0)}{COLORS['RESET']}", 
                                   highlighted_args)
-        return f"{highlighted_cmd} {highlighted_args}"
-    
-    return highlighted_cmd
+        res = f"{highlighted_cmd} {highlighted_args}"
+    else:
+        res = highlighted_cmd
+        
+    if comment_part:
+        res += f" {SYNTAX_COLORS['comment']}{comment_part}{COLORS['RESET']}"
+    return res
 
 def autocorrect(cmd):
     if not autocorrect_enabled or not cmd: return cmd
@@ -357,7 +379,14 @@ if HAS_PROMPT_TOOLKIT:
                 if not text:
                     return []
                 
-                raw_parts = re.split(r'(\s+)', text)
+                # Split code and comments
+                if '#' in text:
+                    code_part, comment_part = text.split('#', 1)
+                    comment_part = '#' + comment_part
+                else:
+                    code_part, comment_part = text, ''
+                
+                raw_parts = re.split(r'(\s+)', code_part)
                 tokens = []
                 is_first_word = True
                 
@@ -390,6 +419,9 @@ if HAS_PROMPT_TOOLKIT:
                         tokens.append(('class:operator', part))
                     else:
                         tokens.append(('class:argument', part))
+                
+                if comment_part:
+                    tokens.append(('class:comment', comment_part))
                 return tokens
             return get_line
 
@@ -439,6 +471,7 @@ if HAS_PROMPT_TOOLKIT:
         'number': '#af87ff',
         'path': '#5fafff',
         'operator': '#ff8700',
+        'comment': '#808080 italic',
     })
 
 # --- READLINE FALLBACK ---
@@ -509,15 +542,24 @@ def execute_command(raw_cmd):
         load_rc(target, run_foreground=True)
         cache_binaries()
         print(f"{COLORS['CYAN']}7945sh: {target} loaded.{COLORS['RESET']}")
+    elif cmd_name in ("clear", "cls"):
+        # Write directly to the real TTY fd
+        os.write(_tty_w_fd, b"\033[H\033[2J")
     else:
         try:
-            # Route directly to the original unbuffered system standard streams to preserve Sixel/image renderers
+            # Pass raw /dev/tty fd integers to Popen.
+            # This ensures subprocesses (fastfetch, catimg, viu, etc.) get a real
+            # isatty()-passing fd so they enable graphics/color output.
+            # TERM is set so tools detect the terminal correctly.
+            env = os.environ.copy()
+            env.setdefault("TERM", "xterm-256color")
             current_process = subprocess.Popen(
                 cmd,
                 shell=True,
-                stdin=sys.__stdin__,
-                stdout=sys.__stdout__,
-                stderr=sys.__stderr__
+                stdin=_tty_r_fd,
+                stdout=_tty_w_fd,
+                stderr=_tty_w_fd,
+                env=env
             )
             current_process.wait()
         except Exception as e:
@@ -551,7 +593,9 @@ def repl():
             except KeyboardInterrupt:
                 print(); continue
 
-            if not raw_cmd: continue
+            if not raw_cmd or raw_cmd.startswith('#'): continue
+            # After session.prompt() returns, prompt_toolkit has already
+            # yielded TTY control back to us. Direct call is safe and correct.
             execute_command(raw_cmd)
     else:
         try:
@@ -573,7 +617,7 @@ def repl():
             except KeyboardInterrupt:
                 print(); continue
 
-            if not raw_cmd: continue
+            if not raw_cmd or raw_cmd.startswith('#'): continue
             
             if syntax_highlight:
                 prompt_lines = prompt_str.split('\n')
