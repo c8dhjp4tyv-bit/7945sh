@@ -33,7 +33,7 @@ DEB_STAGE="$BUILD_DIR/deb"
 mkdir -p "$DEB_STAGE/DEBIAN"
 cp -r "$ROOT_DIR/usr" "$DEB_STAGE/"
 
-cat << 'EOF' > "$DEB_STAGE/DEBIAN/control"
+cat << EOF > "$DEB_STAGE/DEBIAN/control"
 Package: 7945sh
 Version: ${VERSION}
 Section: utils
@@ -60,7 +60,7 @@ ARCH_STAGE="$BUILD_DIR/arch"
 mkdir -p "$ARCH_STAGE"
 cp -r "$ROOT_DIR/usr" "$ARCH_STAGE/"
 
-cat << 'EOF' > "$ARCH_STAGE/.PKGINFO"
+cat << EOF > "$ARCH_STAGE/.PKGINFO"
 pkgname = 7945sh
 pkgver = $VERSION-1
 pkgdesc = Custom fast interactive Linux shell with live syntax highlighting and autocomplete
@@ -80,7 +80,7 @@ mkdir -p "$RPM_TOP"/{SPECS,SOURCES,BUILD,RPMS,SRPMS}
 
 cp "$CWD/7945sh" "$RPM_TOP/SOURCES/"
 
-cat << 'EOF' > "$RPM_TOP/SPECS/7945sh.spec"
+cat << EOF > "$RPM_TOP/SPECS/7945sh.spec"
 Name:           7945sh
 Version:        $VERSION
 Release:        1%{?dist}
